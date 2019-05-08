@@ -1,0 +1,18 @@
+{
+  "name": "open-data-backend",
+  "version": "1.0.0",
+  "description": "Open data backend",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.16.4",
+    "typescript": "^3.4.5"
+  },
+  "devDependencies": {
+    "tslint": "^5.16.0"
+  }
+}
