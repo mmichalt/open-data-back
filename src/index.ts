@@ -4,6 +4,7 @@ import * as fs from "fs";
 import {CsvExport} from "./csvExport";
 import {PeriodicTable} from "./csvImport";
 import {FinanceData} from "./financeData";
+import {SSRS} from "./ssrs";
 const app = express();
 const port = 8080;
 
@@ -20,6 +21,15 @@ app.get( "/financedata", ( req, res ) => {
     res.send(data);
     CsvExport.exportCSV('financeData.csv', data);
 } );
+
+app.get("/ssrs-finance-data", (req, res) => {
+    SSRS.f((err: any, data: any) => {
+        if (err) {
+            console.log(err);
+        }
+        res.send(data);
+    });
+});
 
 app.listen( port, () => {
     console.log( `server started at http://localhost:${ port }` );
