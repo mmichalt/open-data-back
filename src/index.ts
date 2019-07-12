@@ -1,10 +1,10 @@
 import cors from "cors";
 import express from "express";
-import * as fs from "fs";
 import {CsvExport} from "./csvExport";
 import {PeriodicTable} from "./csvImport";
 import {FinanceData} from "./financeData";
 import {SSRS} from "./ssrs";
+
 const app = express();
 const port = 8080;
 
@@ -22,14 +22,33 @@ app.get( "/financedata", ( req, res ) => {
     CsvExport.exportCSV('financeData.csv', data);
 } );
 
-app.get("/ssrs-finance-data", (req, res) => {
-    SSRS.f((err: any, data: any) => {
+app.get("/finance-data-overall", (req, res) => {
+    SSRS.f('localhost', 80, 'FinanceData/OverallByYearReport', {}, (err: any, data: any) => {
         if (err) {
             console.log(err);
         }
-        res.send(data);
+        SSRS.finaliseMarkup(data, res);
     });
 });
+
+app.get("/finance-data-vis", (req, res) => {
+    SSRS.f('localhost', 80, 'FinanceData/PerYearReport', {year: req.query.year}, (err: any, data: any) => {
+        if (err) {
+            console.log(err);
+        }
+        SSRS.finaliseMarkup(data, res);
+    });
+});
+
+// app.get('/img', (req, res) => {
+//    SSRS.chartIMG(reportImageURL, (err: any, img: any) => {
+//        if (err) {
+//            console.log(err);
+//        }
+//        const decoded = Buffer.from(Buffer.from(img, 'hex')).toString('base64');
+//        res.send(decoded);
+//    });
+// });
 
 app.listen( port, () => {
     console.log( `server started at http://localhost:${ port }` );

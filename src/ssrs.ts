@@ -1,40 +1,77 @@
-// tslint:disable-next-line:no-var-requires
-const ssrs = require('mssql-ssrs');
-// tslint:disable-next-line:no-var-requires
-const mhtml2html = require('mhtml2html');
-import fs from 'fs';
 import http from 'http';
-
 import {Configuration} from "./config";
 
 export class SSRS {
-    public static f(callback: any) {
+    public static f(host: string, port: number, reportURL: string, parameters: {[key: string]: any}, callback: any) {
         const authHeader = 'Basic ' + Buffer.from(Configuration.ssrsAuth.username + ':'
             + Configuration.ssrsAuth.password).toString('base64');
         const header = {
             "Authorization": authHeader,
-            "Content-Type": 'application/pdf'
+            "Content-Type": 'application/html'
+        };
+        let result = '';
+        let parameterString = '';
+        Object.keys(parameters).forEach((el) => {
+            parameterString += `&${el}=${String(parameters[el])}`;
+        });
+        const client = http.request({
+            port,
+            host,
+            headers: header,
+            path: `/ReportServer?/${reportURL}${parameterString}&rc:Toolbar=false&rc:HTMLFragment=true`,
+            method: 'GET'
+        }, (res) => {
+            res.setEncoding('binary');
+            res.on('data', (chunk) => {
+                result += chunk;
+            });
+            res.on('end', () => {
+                callback(null, result);
+            });
+        });
+        client.on('error', (e) => {
+            console.log(e.message);
+        });
+        client.end();
+    }
+    public static chartIMG(url: string, callback: any) {
+        const authHeader = 'Basic ' + Buffer.from(Configuration.ssrsAuth.username + ':'
+            + Configuration.ssrsAuth.password).toString('base64');
+        const header = {
+            "Authorization": authHeader,
+            "Content-Type": 'application/html'
         };
         let result = '';
         const client = http.request({
             port: 80,
             host: 'localhost',
             headers: header,
-            path: '/ReportServer?/FinanceData/MasterReport&Year=2010&rc:Toolbar=false&rc:HTMLFragment=true',
-            method: 'GET'
+            path: url,
+            method: 'POST'
         }, (res) => {
-            console.log(res.headers);
-            console.log(res.statusCode);
-            console.log(res.statusMessage);
-            res.setEncoding('binary');
+            res.setEncoding('hex');
             res.on('data', (chunk) => {
                 result += chunk;
             });
-            res.on('end', () => callback(null, result));
+            res.on('end', () => {
+                callback(null, result);
+            });
         });
         client.on('error', (e) => {
             console.log(e.message);
         });
         client.end();
+    }
+    public static finaliseMarkup(data: string, res: any) {
+        const reportImageURL = data.match(/src="http:\/\/([^\\"]|\\")*"/)[0].slice(21, -1);
+        SSRS.chartIMG(reportImageURL, (error: any, img: any) => {
+            if (error) {
+                console.log(error);
+            }
+            const decoded = Buffer.from(Buffer.from(img, 'hex')).toString('base64');
+            data = data.replace(data.match(/src="http:\/\/([^\\"]|\\")*"/)[0],
+                `src="data:image/png;base64,${decoded}"`);
+            res.send(data);
+        });
     }
 }
