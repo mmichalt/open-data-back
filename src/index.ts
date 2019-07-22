@@ -22,33 +22,24 @@ app.get( "/financedata", ( req, res ) => {
     CsvExport.exportCSV('financeData.csv', data);
 } );
 
-app.get("/finance-data-overall", (req, res) => {
-    SSRS.f('localhost', 80, 'FinanceData/OverallByYearReport', {}, (err: any, data: any) => {
-        if (err) {
-            console.log(err);
+app.get("/finance-data/:year", async (req, res) => {
+    try {
+        let reportUrl: string;
+        let yearParam: any;
+        if (req.params.year === 'all') {
+            reportUrl = 'FinanceData/OverallByYearReport';
+            yearParam = {};
+        } else {
+            reportUrl = 'FinanceData/PerYearReport';
+            yearParam = {year: req.params.year};
         }
-        SSRS.finaliseMarkup(data, res);
-    });
+        const report = await SSRS.f('localhost', 80, reportUrl, yearParam);
+        const finalizedMarkup = await SSRS.finaliseMarkup(report as string, res);
+        res.send(finalizedMarkup);
+    } catch (e) {
+        console.error(e);
+    }
 });
-
-app.get("/finance-data-vis", (req, res) => {
-    SSRS.f('localhost', 80, 'FinanceData/PerYearReport', {year: req.query.year}, (err: any, data: any) => {
-        if (err) {
-            console.log(err);
-        }
-        SSRS.finaliseMarkup(data, res);
-    });
-});
-
-// app.get('/img', (req, res) => {
-//    SSRS.chartIMG(reportImageURL, (err: any, img: any) => {
-//        if (err) {
-//            console.log(err);
-//        }
-//        const decoded = Buffer.from(Buffer.from(img, 'hex')).toString('base64');
-//        res.send(decoded);
-//    });
-// });
 
 app.listen( port, () => {
     console.log( `server started at http://localhost:${ port }` );
